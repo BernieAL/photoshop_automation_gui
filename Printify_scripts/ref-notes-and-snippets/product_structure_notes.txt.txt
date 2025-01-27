@@ -1,0 +1,175 @@
+Product Id's look like this :
+    5cb87a8cd490a2ccb256cec4
+
+
+// ====================================================================
+This is what one entire product listing looks like returned from printify:
+
+    
+        {
+            "id": "645d066c33719908000e5df6",
+            "title": "coffee - stay away",
+            "description": "A 100% cotton tote bag is the champion of durability, sustainability, and style. You can print your stunning designs on both sides of this bag in beautiful quality that'll last for years to come.\n.: Material: 6 oz./yd\u00b2, 100% natural cotton canvas fabric\n.: One size: 15\" x 16\" (38.1cm x 40.6cm)\n.: Convenient self-fabric handles\n.: Double-sided print",
+            "tags": [
+                "Accessories",
+                "Bags",
+                "DTG",
+                "Totes",
+                "Outdoor"
+            ],
+            "options": [
+                {
+                    "name": "Size",
+                    "type": "size",
+                    "values": [
+                        {
+                            "id": 3636,
+                            "title": "15\" x 16\""
+                        }
+                    ]
+                },
+                {
+                    "name": "Color",
+                    "type": "color",
+                    "values": [
+                        {
+                            "id": 3691,
+                            "title": "Natural",
+                            "colors": [
+                                "#e0cdbf",
+                                "#ddd7cc"
+                            ]
+                        }
+                    ]
+                }
+            ],
+            "variants": [
+                {
+                    "id": 82432,
+                    "sku": "11755577945119159782",
+                    "cost": 715,
+                    "price": 2800,
+                    "title": "15\" x 16\" / Natural",
+                    "grams": 59,
+                    "is_enabled": true,
+                    "is_default": true,
+                    "is_available": true,
+                    "options": [
+                        3636,
+                        3691
+                    ],
+                    "quantity": 1
+                }
+            ],
+            "images": [
+                {
+                    "src": "https://images.printify.com/mockup/645d066c33719908000e5df6/82432/52452/coffee-stay-away.jpg?camera_label=front",
+                    "variant_ids": [
+                        82432
+                    ],
+                    "position": "other",
+                    "is_default": true,
+                    "is_selected_for_publishing": true
+                },
+                {
+                    "src": "https://images.printify.com/mockup/645d066c33719908000e5df6/82432/53739/coffee-stay-away.jpg?camera_label=back",
+                    "variant_ids": [
+                        82432
+                    ],
+                    "position": "other",
+                    "is_default": false,
+                    "is_selected_for_publishing": true
+                },
+                {
+                    "src": "https://images.printify.com/mockup/645d066c33719908000e5df6/82432/53740/coffee-stay-away.jpg?camera_label=context-1-front",
+                    "variant_ids": [
+                        82432
+                    ],
+                    "position": "other",
+                    "is_default": false,
+                    "is_selected_for_publishing": true
+                },
+                {
+                    "src": "https://images.printify.com/mockup/645d066c33719908000e5df6/82432/53741/coffee-stay-away.jpg?camera_label=context-1-back",
+                    "variant_ids": [
+                        82432
+                    ],
+                    "position": "other",
+                    "is_default": false,
+                    "is_selected_for_publishing": true
+                },
+                {
+                    "src": "https://images.printify.com/mockup/645d066c33719908000e5df6/82432/53742/coffee-stay-away.jpg?camera_label=context-2-front",
+                    "variant_ids": [
+                        82432
+                    ],
+                    "position": "other",
+                    "is_default": false,
+                    "is_selected_for_publishing": true
+                },
+                {
+                    "src": "https://images.printify.com/mockup/645d066c33719908000e5df6/82432/53743/coffee-stay-away.jpg?camera_label=context-2-back",
+                    "variant_ids": [
+                        82432
+                    ],
+                    "position": "other",
+                    "is_default": false,
+                    "is_selected_for_publishing": true
+                },
+                {
+                    "src": "https://images.printify.com/mockup/645d066c33719908000e5df6/82432/53745/coffee-stay-away.jpg?camera_label=detail",
+                    "variant_ids": [
+                        82432
+                    ],
+                    "position": "other",
+                    "is_default": false,
+                    "is_selected_for_publishing": true
+                }
+            ],
+            "created_at": "2023-05-11 15:14:52+00:00",
+            "updated_at": "2023-05-17 04:01:35+00:00",
+            "visible": true,
+            "is_locked": false,
+            "external": {
+                "id": "1467063218",
+                "handle": "https://www.etsy.com/listing/1467063218/funny-quote-tote-bag-for-coffee-lover",
+                "shipping_template_id": "201273224385"
+            },
+            "blueprint_id": 1090,
+            "user_id": 12746660,
+            "shop_id": 9157753,
+            "print_provider_id": 41,
+            "print_areas": [
+                {
+                    "variant_ids": [
+                        82432
+                    ],
+                    "placeholders": [
+                        {
+                            "position": "front",
+                            "images": [
+                                {
+                                    "id": "645d0687c397d6512408b13a",
+                                    "name": "14.png",
+                                    "type": "image/png",
+                                    "height": 3000,
+                                    "width": 2812,
+                                    "x": 0.4821329493555283,
+                                    "y": 0.49999999999999983,
+                                    "scale": 1,
+                                    "angle": 0
+                                }
+                            ]
+                        },
+                        {
+                            "position": "back",
+                            "images": []
+                        }
+                    ]
+                }
+            ],
+            "print_details": [],
+            "sales_channel_properties": [],
+            "twodaydelivery_enabled": false
+        },
+// ===========================================================

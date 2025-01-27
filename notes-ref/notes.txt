@@ -1,0 +1,93 @@
+<<<<<<< HEAD
+Flask config options:
+
+    most basic is to define your vars as keys in app.config 
+    this is dict style to work with variables
+
+        ex.
+            app = Flask(__name__)
+            app.config['SECRET_KEY'] = 'you will never guess'
+
+    however its better to enforce seperation of concerns and move
+    configuration to a seperate file
+    
+    Miguel grinberg uses class to store config vars because its extensible (easy extension and addition of new things)
+
+    //create Config class in seperate config.py module
+        Ex.
+            import os
+
+            class Config(object):
+                SECRET_KEY = os.environ.get('SECRET_KEY') or 'you-will-never-guess'
+
+    SECRET_KEY config var is important part of flask apps - flask and some of its extensions use the value of a secret key as a cryptographic key, for generating signature or tokens
+
+        flask wtf extension uses the secret key to protect against CSRF attacks.
+        -value of secret key is set as an expression with 2 terms joins by 'or' operator
+        -first term looks for value of an env var called 'SECRET_KEY'
+        -second term is a hardcoded string
+        -this is a repeatable patterns for other config vars
+        -idea is that a value sourced from an env var is prefered but if the env does not define a var, then the hardcoded string is instead used as a default
+
+    once config file is created, need to tell flask to read it and apply it.
+    lowercase config is the name of the python module config.py and 'Config' is the actual class
+        Ex.
+            from flask import Flask
+            from config import Config
+
+            app = Flask(__name__)
+            app.config.from_object(Config)
+
+            from app import routes (if routes is setup)
+    
+=======================================================================
+
+
+
+=======
+Flask config options:
+
+    most basic is to define your vars as keys in app.config 
+    this is dict style to work with variables
+
+        ex.
+            app = Flask(__name__)
+            app.config['SECRET_KEY'] = 'you will never guess'
+
+    however its better to enforce seperation of concerns and move
+    configuration to a seperate file
+    
+    Miguel grinberg uses class to store config vars because its extensible (easy extension and addition of new things)
+
+    //create Config class in seperate config.py module
+        Ex.
+            import os
+
+            class Config(object):
+                SECRET_KEY = os.environ.get('SECRET_KEY') or 'you-will-never-guess'
+
+    SECRET_KEY config var is important part of flask apps - flask and some of its extensions use the value of a secret key as a cryptographic key, for generating signature or tokens
+
+        flask wtf extension uses the secret key to protect against CSRF attacks.
+        -value of secret key is set as an expression with 2 terms joins by 'or' operator
+        -first term looks for value of an env var called 'SECRET_KEY'
+        -second term is a hardcoded string
+        -this is a repeatable patterns for other config vars
+        -idea is that a value sourced from an env var is prefered but if the env does not define a var, then the hardcoded string is instead used as a default
+
+    once config file is created, need to tell flask to read it and apply it.
+    lowercase config is the name of the python module config.py and 'Config' is the actual class
+        Ex.
+            from flask import Flask
+            from config import Config
+
+            app = Flask(__name__)
+            app.config.from_object(Config)
+
+            from app import routes (if routes is setup)
+    
+=======================================================================
+
+
+
+>>>>>>> a77e3005d7686103d149316ede89007f540f9f25

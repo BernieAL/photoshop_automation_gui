@@ -1,0 +1,14 @@
+As of 11/29
+    -Printify API img upload still not working
+    -This requires user to manually upload images through printify dashboard
+    -s3_bucket_utility to persist images to aws s3 bucket storage - but not in use because printify api img upload endpoint not working for base64 encoded content or using hosted img url
+    
+
+
+12/1
+    -Add a function to write created product objects to a file in case theres an error making the request to printify - we wont have to run the script again to create the product objects, they will be a in file, which we can use to pick up where we left off
+
+    renaming all properly via canva
+
+
+    

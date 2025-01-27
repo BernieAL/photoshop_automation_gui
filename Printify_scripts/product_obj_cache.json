@@ -1,0 +1,3 @@
+// This is a cache for already created types of product objects 
+// itll be a place to store unique versions 
+// so a user can ultimaltey select the product_obj on there own through filtering and choose to populate it

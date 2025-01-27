@@ -1,0 +1,34 @@
+# selects all in current layer
+    # test = ps.active_document
+    # test.selection.selectAll()
+    # test.selection.translate(550,450)
+
+# # # this section imports image as layer
+    # desc = ps.ActionDescriptor
+    # desc.putPath(ps.app.charIDToTypeID("null"),"C:/Users/balma/Documents/ecommerce/lady cosmica/Designs/ps-automation-test/mockup-1-body.png")
+    # event_id = ps.app.charIDToTypeID("Plc ")  # `Plc` need one space in here.
+    # ps.app.executeAction(ps.app.charIDToTypeID("Plc "), desc)
+
+
+# # #run action to remove background
+    # ps.app.doAction(action="remove_bg")
+
+# #resize watermark
+    watermark_layer.resize(250,250)
+
+
+# moving a layer
+    watermark_layer.Translate(200,100)
+
+# # #adjust opacity
+    # watermark_layer.opacity=50
+    
+
+#save document
+    options = ps.JPEGSaveOptions(quality=5)
+    jpg = 'C:/Users/balma/Documents/ecommerce/lady cosmica/Designs/ps-automation-test/mockup-test-1.jpg'
+    ps.active_document.saveAs(jpg, options, asCopy=True)
+    ps.app.doJavaScript(f'alert("Successfully saved to jpg: {jpg}")')
+
+
+#remove a layer

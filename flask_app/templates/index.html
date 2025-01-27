@@ -1,0 +1,42 @@
+<<<<<<< HEAD
+{% extends "base.html" %}
+
+{% block content %}
+    
+    
+
+    <form action="" method="post" novalidate>
+        {{ form.hidden_tag() }}
+        <p>
+            {{ form.token.label }}<br>
+            {{ form.token(size=100) }}
+        </p>
+        <p>
+            {{ form.bp_id.label }}<br>
+            {{ form.bp_id(size=32) }}
+        </p>
+        
+        <p>{{ form.submit() }}</p>
+    </form>
+=======
+{% extends "base.html" %}
+
+{% block content %}
+    
+    
+
+    <form action="" method="post" novalidate>
+        {{ form.hidden_tag() }}
+        <p>
+            {{ form.token.label }}<br>
+            {{ form.token(size=100) }}
+        </p>
+        <p>
+            {{ form.bp_id.label }}<br>
+            {{ form.bp_id(size=32) }}
+        </p>
+        
+        <p>{{ form.submit() }}</p>
+    </form>
+>>>>>>> a77e3005d7686103d149316ede89007f540f9f25
+{% endblock %}

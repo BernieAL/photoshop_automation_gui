@@ -1,0 +1,6 @@
+@echo off
+echo Checking Python installation...
+reg query "HKEY_LOCAL_MACHINE\SOFTWARE\Python\PythonCore" /s
+echo.
+echo Checking user Python installation...
+reg query "HKEY_CURRENT_USER\SOFTWARE\Python\PythonCore" /s 

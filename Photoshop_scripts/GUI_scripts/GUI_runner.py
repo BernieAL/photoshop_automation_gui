@@ -101,7 +101,12 @@ class PhotoshopAutomationGUI(ctk.CTk):
             selected_script_path = os.path.join(self.scripts_dir_path, selected_script)
             if os.path.isfile(selected_script_path):
                 try:
-                    subprocess.run(["python", selected_script_path, selected_folder])
+                    # Use the virtual environment's Python interpreter
+                    python_path = os.path.join(os.getcwd(), 'venv', 'Scripts', 'python.exe')
+                    if not os.path.exists(python_path):
+                        # Fallback to system Python if venv not found
+                        python_path = 'python'
+                    subprocess.run([python_path, selected_script_path, selected_folder])
                 except FileNotFoundError:
                     print(f"Script '{selected_script}' not found.")
 

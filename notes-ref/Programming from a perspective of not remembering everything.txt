@@ -1,0 +1,21 @@
+Programming from a perspective - where you can see the type of data you are going through without having to remember
+Ex.
+
+variant['placeholders'] is an array - but this accessing in this way doesnt tell me anything about the value being returned 
+So variant['placeholders'] looks like this:
+    'placeholders': [{'position': 'front', 'height': 3600, 'width': 3000}, {'position': 'back', 'height': 3600, 'width': 3000}
+
+    What if instead of trying to remember the value returned from variant['placeholders'], i could read the var name and know the type of data it is
+    Because variant['placeholders'] could be an object, it could be an array, a string, etc.
+
+    Instead do this
+    array_of_objects_Placeholders = variant['placeholders']
+    The variable name now tell me its an array - I atleast know this much now
+
+Also, make a seperate doc for keeping track of how data structures look
+    Ex.
+
+        "User_selected_product_variants looks like":
+            [{'id': 81758, 'title': '18" x 15"', 'options': {'size': '18" x 15"'}, 'placeholders': [{'position': 'front', 'height': 3600, 'width': 3000}, {'position': 'back', 'height': 3600, 'width': 3000}]}, {'id': 81721, 'title': '18" x 15"', 'options': {'size': '18" x 15"'}, 'placeholders': [{'position': 'front', 'height': 3600, 'width': 3000}, {'position': 'back', 'height': 3600, 'width': 3000}]}]
+
+    Do this so you dont have to keep printing out what the structure looks or trying to keep it in memory

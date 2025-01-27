@@ -1,0 +1,29 @@
+Building:
+
+    simple web app for cli
+
+
+
+        -populate headers
+
+        -enter your token and shop id
+            -test request to verify able to connect to shop
+
+        PRODUCT CREATION BUTTON
+        -enter product blueprint to create
+            retrieve blueprint details to confirm - 1313 is 15x16 tote
+            
+            retrieve print provider options
+            for selected print provider, retrieve variant details
+            
+            for selected variant, display print areas
+            choose print areas
+
+        -select the image(s) you want to use from a list
+            for selected images
+                product objects will be created and requests will be sent off.
+
+        DL ALL MOCKUPS
+            DL mockups for all products
+            DL mockups for specific products by name or type
+            choose destination folder to store

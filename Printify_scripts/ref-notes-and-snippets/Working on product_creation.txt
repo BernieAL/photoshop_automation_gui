@@ -1,0 +1,164 @@
+Working on product_creation.py
+
+Accepts:
+    -BP_ID as int
+    -PP_ID as int
+    -variants obj 
+    -images_to_place as array
+Returns:
+	Array of constructed product objects for selected variants and print areas
+
+This function accepts a variants obj that has user selected variants and user selected print areas. 
+The variants obj also has the raw variant details retrieved from Printify Api
+
+For each selected variant, we want to create a product obj and only include the selected print areas in the product obj
+
+To do this, we put the selected print areas for selected variant in an array
+Then we use the variant id to go into raw_variant_placeholders and retrieve the placeholders for this id
+
+we go through the retrieved placeholders for the id, and check if each placeholder position is found in selected print areas, only keeping the ones that were also found in the selected print areas - and store in an array
+
+we now have removed any placeholder positions the user didnt want by comparing the raw_variant placeholder print areas to the selected_print_areas by user
+
+we can now construct the product obj using the selected print area
+	Reason for this is:
+			-a user may or may not want to use certain print areas for a product
+			so we asked them in a seperate function
+			-additionally, the printify api FORCES you to includes an images array for a print area in the product obj -- if we are not using a print area such as 'back' , then we omit it entirely from the product obj to avoid the issue of having to provides images[] for the non-used print area
+
+To Construct the Product Obj for the current variant
+		
+
+---------------------------
+		
+		Variants obj structure::::::::::
+		{
+            "selected_variants_and_print_areas": [
+                {
+                    "id": 81758,
+                    "selected_print_areas": [
+                        "front"
+                    ]
+                },
+                {
+                    "id": 81721,
+                    "selected_print_areas": [
+                        "front",
+                        "back"
+                    ]
+                }
+            ],
+            "selected_raw_variants": [
+                {
+                    "id": 81758,
+                    "title": "18\" x 15\"",
+                        "options": {
+                            "size": "18\" x 15\""
+                        },
+                    "placeholders": [
+                        {
+                            "position": "front",
+                            "height": 3600,
+                            "width": 3000
+                        },
+                        {
+                            "position": "back",
+                            "height": 3600,
+                            "width": 3000
+                        }
+                    ]
+                },
+                {
+                    "id": 81721,
+                    "title": "18\" x 15\"",
+                    "options": {
+                        "size": "18\" x 15\""
+                },
+                "placeholders": [
+                    {
+                        "position": "front",
+                        "height": 3600,
+                        "width": 3000
+                    },
+                    {
+                        "position": "back",
+                        "height": 3600,
+                        "width": 3000
+                    }
+                ]}
+            ]
+            }
+	//END VARIANTS STRUCTURE
+	--------------------------------
+	
+	:::::::::::::Product obj / payload structure:::::::::
+	
+				payload = {
+				    "title": "Product",
+				    "description": "Good product",
+				    "blueprint_id": 1092,
+				    "print_provider_id": 41,
+				    "variants": [
+				          {
+				              "id": 81758,
+				              "price": 400,
+				              "is_enabled": True
+				          }
+				      ],
+				      "print_areas": [
+				        {
+				          "variant_ids": [81758],
+				          "placeholders": [
+				             {
+				              "position": "front",
+				              "images": [
+				                  {
+				                    "id": "6469b4c57c5f5a46e2461dcd", 
+				                    "x": 0.5, 
+				                    "y": 0.5, 
+				                    "scale": 1,
+				                    "angle": 0
+				                  }
+				              ]
+				            },{
+				              "position": "back",
+				              "images": [
+				                  {
+				                    "id": "6469b4c57c5f5a46e2461dcd", 
+				                    "x": 0.5, 
+				                    "y": 0.5, 
+				                    "scale": 1,
+				                    "angle": 0
+				                  }
+				              ]
+				            }                
+				          ]
+				        }
+				      ]
+				  }
+	//END PRODUCT OBJ/payload STRUCTURE
+	--------------------------------------
+
+	
+
+GENERIC PAYLOAD TEMPLATE THAT WE UPDATE PROPERTIES OF DYNAMICALLY
+
+        generic_payload = {
+            "title": None,
+            "description": None,
+            "blueprint_id": None,
+            "print_provider_id": None,
+            "variants": [
+                    {
+                        "id": None,
+                        "price": None,
+                        "is_enabled": True
+                    }
+                ],
+                "print_areas": [
+                {
+                    "variant_ids": None,
+                    "placeholders": None
+                }
+                ]
+        }

@@ -1,0 +1,12 @@
+<<<<<<< HEAD
+template form to take user input
+    take token
+    take bpid
+
+=======
+template form to take user input
+    take token
+    take bpid
+
+>>>>>>> a77e3005d7686103d149316ede89007f540f9f25
+return variants to user and ask them which to select

@@ -1,0 +1,154 @@
+"""Creates Product Object for Single Product for specific image(s)
+Ex. For single 11oz mug, create multiple product objects using the images
+So create 1 product object for each image
+
+Accepts: product_variants: BP_ID,PP_ID, product_variants, target images to place
+Returns: array of constructed product_objects for single product
+
+Process:
+    Extracts variant_id and placeholders[] from variant
+    placeholders[] contains print_area objects (Ex. Position 'front')
+    Define 'images[]' prop to be appended into print_area object
+            ('images[]' is prop where we define img objects to be placed on product)
+    'images[]' inserted into print_area obj
+    take newly modified variant_placeholders and save as new var 'modified_variant_placeholders'
+    insert modified_variant_placeholders into generic_payload['placeholders']
+    
+
+# Note for later:
+#     its possible theres multiple variants for a product
+# """
+# def create_product_object_single_specific_image(BP_ID,PP_ID,variant,images_to_place):
+    
+#     # get copy of default gen_payload
+#     #wont need to reset gen_payload later property by property
+#     #only need to reset constructed_payload_obj back to gen_payload because gen_payload never changed
+#     constructed_payload_obj = generic_payload.copy()
+#     print("INTIAL PAYLOAD OBJ: \n",constructed_payload_obj)
+#     print("--------------")
+    
+#     # print(len(images_to_place))
+#     constructed_payload_objects = [] #array to put constructed product_objects to be returned
+
+    
+#     #from variant extract variant ID and placeholders[]
+#     #placeholders gives the print areas availabe (Ex. position:'Front')
+#     variant_id = variant["variants"][0]["id"] #Extract variant id -> Ex 61424
+#     variant_placeholders_array = variant["variants"][0]["placeholders"] #extract variant placeholders[], containing print areas
+   
+  
+#     #variant_placeholders[0] is first print_area object in placeholders[]
+#     """ "placeholders": [
+#                 //!!!PRINT AREA OBJECT!!!
+#                 { 
+#                     "position": "front",
+#                     "height": 1155,
+#                     "width": 2475
+#                 }
+#                 //!!!END PRINT AREA OBJECT!!!
+#             ]
+#     """
+    
+#     # gets first print_area object in placeholders[]
+#     print_area_obj = variant_placeholders_array[0] #'front'
+
+#     """for each img in images_to_place[]
+#        insert defined img object into 'images'[]   
+#        insert defined 'images[]' into print_area_obj
+#     """
+   
+#     for img in images_to_place:
+#         # print(img)
+
+#         #define img object, insert into 'images' property of print_area_obj, 'images[]' prop doesnt exist initially so we are making it here
+#         #this means original variant placeholders[] has been updated to include 'images[]'
+#         #if you print print_area_obj before this step and immediatley after, you can see 'images' property was inserted as a key into the print_area_obj
+        
+#         print_area_obj['images'] = [{
+#                                     "id": img['ID'], 
+#                                     "x": 0.5, 
+#                                     "y": 0.5, 
+#                                     "scale": 1,
+#                                     "angle": 0
+#                                     }]
+#         # print("PRINT_AREA_OBJ AFTER 'IMAGES' INSERTION \n",print_area_obj)
+        
+
+    
+#         #insert modified variant_placeholders into generic_payload['placeholders']
+#         # print("CONSTRUCTED_PAYLOAD BEFORE VARIANT_PLACEHOLDERS INSERTION \n",constructed_payload_obj)
+#         constructed_payload_obj['print_areas'][0]['placeholders'] = variant_placeholders_array
+#         # print("CONSTRUCTED_PAYLOAD AFTER VARIANT_PLACEHOLDERS INSERTION \n",constructed_payload_obj)
+
+#         #Populate remaining generic_payload properties 
+#         # generic_payload['print_areas'][0]['placeholders'] = generic_payload_placeholder
+#         # print(json.dumps(generic_payload_placeholder,indent=2))
+#         constructed_payload_obj['title']= img
+#         constructed_payload_obj['description']='a beautiful mug'
+#         constructed_payload_obj['blueprint_id'] = BP_ID
+#         constructed_payload_obj['print_provider_id'] = PP_ID
+#         constructed_payload_obj['variants'][0] = {
+#             'id':variant_id,
+#             'price':400,
+#             'is_enabled':True
+#         }
+#         constructed_payload_obj['print_areas'][0]['variant_ids']=[variant_id]
+#         # print(json.dumps(generic_payload,indent=2))
+#         # print("--------------")
+#         # print("AFTER POPULATING CONSTRUCTED_PAYLOAD \n" ,constructed_payload_obj)
+#         # print("--------------")
+
+#         #push current constructed payload obj into array of payload objs to be returned
+#         constructed_payload_objects.append(constructed_payload_obj.copy())
+#         print("Constructed payload object:", constructed_payload_obj)
+
+#         # before going to next img, clear construct_payload_obj by setting it generic_payload
+#         #and reset 'images' to None
+#         # constructed_payload_obj = generic_payload
+#         # # constructed_payload_obj['print_areas'][0]['placeholders'][0]['images'] = None
+#         # print("AFTER REASSIGNMENT TO GEN PAYLOAD: \n",constructed_payload_obj)
+#         # print("--------------")
+
+#     # # url = f"https://api.printify.com/v1/shops/{shop_id}/products.json"
+#     # # response = requests.post(url,headers=headers,json=generic_payload)
+#     # # if response.status_code == 200:
+#     # #     print("Product created successfully!")
+#     # #     print("Product ID:", response.json().get("id"))
+#     # # else:
+#     # #     print("Error:", response.text)
+
+#     return constructed_payload_objects
+
+# # TESTING
+# # product_variants = get_product_variants_from_print_provider(PP_ID,BP_ID)
+# # create_product_object_specific_image(product_variants,BP_ID,28)
+# -----------------------------------------------------------
+"""
+"how structures look for the script"
+STRUCTURES REFERENCE:
+
+
+    variants = [
+        {'id': 81758, 'title': '18" x 15"', 'options': {'size': '18" x 15"'},'placeholders': [{'position': 'front', 'height': 3600, 'width': 3000}, {'position': 'back', 'height': 3600, 'width': 3000}]},
+        {'id': 81721, 'title': '18" x 15"', 'options': {'size': '18" x 15"'}, 'placeholders': [{'position': 'front', 'height': 3600, 'width': 3000}, {'position': 'back', 'height': 3600, 'width': 3000}]}
+    ]
+
+
+    numbered_print_area_options_for_variant = 
+        {
+            0: 'front', 
+            1: 'back'
+        }
+
+        
+    USER_INPUT_print_area_nums_array = single or multiple digit array
+        [0] or [0,1,2....]
+    Each digit represents a print_area that was selected by user (0:'Front',1:'Back')
+
+    
+    variant_to_USER_SELECTED_print_areas{
+        83718:{}
+    }
+    
+}
+"""

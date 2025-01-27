@@ -175,11 +175,7 @@ def IMG_get_ALL_images_from_library_REQUEST():
             imgs_collected_count+=1
            
         #check if theres no link to next page preset on current page
-        if uploads_response['next_page_url']:
-            response = requests.get(uploads_response['next_page_url'], headers=headers)
-            uploads_response = response.json()
-            curr_pg_libary_imgs = uploads_response['data'] #get 'data' array property of root response
-        else:
+        if (uploads_response['next_page_url']) == None:
             print(chalk.green(f"END OF PAGES REACHED: {curr_pg_num} - NO NEXT PAGE"))
             break;
         # from current pg, get next_pg_url
@@ -923,6 +919,14 @@ def PRINT_AREA_user_select_print_areas_NEW(User_selected_product_variants_raw=[8
 
 
 #========================================================================
+def PRODUCT_product_object_fail_safe_capture():
+
+    """FUNCTION DETAILS
+
+    Purpose: In the event the script fails in some way or the request to create the product to printify, the created product objects will be written to a file
+    which the user can use instead of having to create all product objects over again
+    """
+#========================================================================
 def PRODUCT_create_product_object_specific_img_selection(BP_ID,PP_ID,variants,images_to_place):
 
 
@@ -1507,59 +1511,3 @@ send off reqeust with payload in request body
 
 
 """
-
-class RateLimiter:
-    def __init__(self, calls_per_second=2):
-        self.calls_per_second = calls_per_second
-        self.last_call = 0
-        
-    def wait(self):
-        now = time.time()
-        time_since_last = now - self.last_call
-        if time_since_last < (1.0 / self.calls_per_second):
-            time.sleep((1.0 / self.calls_per_second) - time_since_last)
-        self.last_call = time.time()
-
-# Usage in PrintifyManager
-class PrintifyManager:
-    def __init__(self):
-        self.rate_limiter = RateLimiter()
-        self.token = os.getenv('PRINTIFY_TOKEN')
-        self.shop_id = os.getenv('PRINTIFY_SHOP_ID')
-        self.headers = {
-            'Authorization': f'Bearer {self.token}',
-            'User-Agent': 'PYTHON'
-        }
-        
-    def make_api_call(self, *args, **kwargs):
-        self.rate_limiter.wait()
-        return make_api_request(*args, **kwargs)
-
-class CacheManager:
-    def __init__(self, cache_file, expiry_hours=24):
-        self.cache_file = cache_file
-        self.expiry_hours = expiry_hours
-        
-    def is_cache_valid(self, cache_data):
-        if not cache_data or 'timestamp' not in cache_data:
-            return False
-        hours_since_update = (time.time() - cache_data['timestamp']) / 3600
-        return hours_since_update < self.expiry_hours
-        
-    def load_cache(self):
-        try:
-            with open(self.cache_file, "r") as file:
-                cache_data = json.load(file)
-                if self.is_cache_valid(cache_data):
-                    return cache_data['data']
-        except (FileNotFoundError, json.JSONDecodeError):
-            pass
-        return None
-        
-    def save_cache(self, data):
-        cache_data = {
-            'timestamp': time.time(),
-            'data': data
-        }
-        with open(self.cache_file, "w") as file:
-            json.dump(cache_data, file, indent=2)
