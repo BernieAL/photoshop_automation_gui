@@ -75,13 +75,13 @@ class ImageProcessor:
                     
                     img_layer = ps.active_document.activeLayer
                     
-                    # Apply operations
-                    if "Remove Background" in operations:
+                    # Apply operations sequentially for each image
+                    if "Custom Placement + Background Removal + Watermark" in operations:
+                        # 1. Remove background
                         log(f"Removing background from {file}")
                         ps.app.doAction("remove_bg", "Default Actions")
-                    
-                    if "Custom Placement & Background" in operations:
-                        # Get context and apply placement settings
+                        
+                        # 2. Apply custom placement
                         context = self._extract_context(file)
                         if context and context in context_settings:
                             settings = context_settings[context]
@@ -93,18 +93,49 @@ class ImageProcessor:
                             if settings.get('rotate'):
                                 img_layer.rotate(settings['rotate'])
                             img_layer.opacity = settings['opacity']
-                    
-                    if "Add Watermark" in operations:
+                        
+                        # 3. Add watermark
                         log(f"Adding watermark to {file}")
-                        # Import watermark
                         desc = ps.ActionDescriptor
                         desc.putPath(ps.app.charIDToTypeID("null"), self.watermark_path)
                         ps.app.executeAction(ps.app.charIDToTypeID("Plc "), desc)
                         time.sleep(1.5)
                         
-                        # Position watermark (using default settings for now)
                         watermark_layer = ps.active_document.activeLayer
                         watermark_layer.opacity = 50
+                    
+                    else:
+                        # Check if both individual operations are selected
+                        if "Remove Background ONLY" in operations and "Add Watermark ONLY" in operations:
+                            # 1. Remove background first
+                            log(f"Removing background from {file}")
+                            ps.app.doAction("remove_bg", "Default Actions")
+                            
+                            # 2. Add watermark
+                            log(f"Adding watermark to {file}")
+                            desc = ps.ActionDescriptor
+                            desc.putPath(ps.app.charIDToTypeID("null"), self.watermark_path)
+                            ps.app.executeAction(ps.app.charIDToTypeID("Plc "), desc)
+                            time.sleep(1.5)
+                            
+                            watermark_layer = ps.active_document.activeLayer
+                            watermark_layer.opacity = 50
+                            
+                        else:
+                            # Handle single operations
+                            if "Remove Background ONLY" in operations:
+                                log(f"Removing background from {file}")
+                                ps.app.doAction("remove_bg", "Default Actions")
+                            
+                            if "Add Watermark ONLY" in operations:
+                                log(f"Adding watermark to {file}")
+                                desc = ps.ActionDescriptor
+                                desc.putPath(ps.app.charIDToTypeID("null"), self.watermark_path)
+                                ps.app.executeAction(ps.app.charIDToTypeID("Plc "), desc)
+                                time.sleep(1.5)
+                                
+                                watermark_layer = ps.active_document.activeLayer
+                                watermark_layer.opacity = 50
                     
                     # Save processed image
                     output_path = os.path.join(output_dir, f"{os.path.splitext(file)[0]}-processed.jpg")

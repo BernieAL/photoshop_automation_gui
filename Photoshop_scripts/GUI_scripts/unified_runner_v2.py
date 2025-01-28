@@ -18,9 +18,9 @@ from image_processor import ImageProcessor
 
 class ProcessingOptions:
     """Stores the selected processing options"""
-    REMOVE_BG = "Remove Background"
-    ADD_WATERMARK = "Add Watermark"
-    CUSTOM_PLACEMENT = "Custom Placement & Background"
+    REMOVE_BG = "Remove Background ONLY"
+    ADD_WATERMARK = "Add Watermark ONLY"
+    CUSTOM_PLACEMENT = "Custom Placement + Background Removal + Watermark"
     
     @staticmethod
     def get_all_options():
@@ -37,25 +37,42 @@ class UnifiedRunnerGUI(ctk.CTk):
         # Configure window
         self.title("Photoshop Automation Runner")
         self.geometry("1000x800")
+        self.minsize(1000, 800)  # Set minimum window size
         
         # State variables
         self.selected_folders = []
         self.processing_options = set()
         self.context_settings = {}  # Stores placement settings for each context
         
-        # Initialize handlers
+        # Initialize paths
         self.template_path = "C:/Users/balma/Documents/ecommerce/lady cosmica/background listing templates/base-template.png"  # TODO: Make configurable
         self.watermark_path = "C:/Users/balma/Documents/ecommerce/lady cosmica/graphics-watermarks-backgrounds/Lady-Cosmica-Watermark.png"  # TODO: Make configurable
-        self.placement_handler = ContextPlacementHandler(self.template_path)
+        
+        # Initialize handlers
+        self.placement_handler = ContextPlacementHandler(
+            template_path=self.template_path,
+            watermark_path=self.watermark_path
+        )
         self.image_processor = ImageProcessor(self.template_path, self.watermark_path)
         
         self._create_gui()
     
     def _create_gui(self):
         """Create the main GUI elements"""
-        # Main container
-        self.main_frame = ctk.CTkFrame(self)
+        # Create outer scrollable container
+        outer_frame = ctk.CTkFrame(self)
+        outer_frame.pack(fill="both", expand=True)
+        
+        # Main scrollable container
+        self.main_frame = ctk.CTkScrollableFrame(
+            outer_frame,
+            width=960,  # Slightly less than window width to avoid horizontal scroll
+            height=780  # Slightly less than window height to avoid window resize
+        )
         self.main_frame.pack(fill="both", expand=True, padx=20, pady=20)
+        
+        # Configuration Section
+        self._create_config_section()
         
         # Folder Selection Section
         self._create_folder_section()
@@ -71,6 +88,38 @@ class UnifiedRunnerGUI(ctk.CTk):
         
         # Status Display
         self._create_status_section()
+    
+    def _create_config_section(self):
+        """Create the configuration section"""
+        config_frame = ctk.CTkFrame(self.main_frame)
+        config_frame.pack(fill="x", padx=10, pady=10)
+        
+        # Title
+        title_label = ctk.CTkLabel(
+            config_frame,
+            text="Configuration",
+            font=("Arial", 14, "bold")
+        )
+        title_label.pack(pady=5)
+        
+        # Watermark Path
+        watermark_frame = ctk.CTkFrame(config_frame)
+        watermark_frame.pack(fill="x", padx=5, pady=5)
+        
+        watermark_label = ctk.CTkLabel(watermark_frame, text="Watermark:")
+        watermark_label.pack(side="left", padx=5)
+        
+        self.watermark_entry = ctk.CTkEntry(watermark_frame, width=400)
+        self.watermark_entry.pack(side="left", padx=5, fill="x", expand=True)
+        self.watermark_entry.insert(0, self.watermark_path)
+        
+        watermark_browse = ctk.CTkButton(
+            watermark_frame,
+            text="Browse",
+            command=self._browse_watermark,
+            width=100
+        )
+        watermark_browse.pack(side="right", padx=5)
     
     def _create_folder_section(self):
         """Create the folder selection section"""
@@ -144,10 +193,17 @@ class UnifiedRunnerGUI(ctk.CTk):
         
         self.context_label = ctk.CTkLabel(
             self.context_frame,
-            text="Context Settings",
+            text="Settings For Image Context(s)",
             font=("Arial", 14, "bold")
         )
         self.context_label.pack(pady=5)
+        
+        # Create scrollable frame for contexts
+        self.context_scroll = ctk.CTkScrollableFrame(
+            self.context_frame,
+            height=250  # Fixed height
+        )
+        self.context_scroll.pack(fill="x", padx=5, pady=5)
         
         # Will be populated when contexts are detected
         self.context_widgets = {}
@@ -174,12 +230,26 @@ class UnifiedRunnerGUI(ctk.CTk):
     
     def _create_status_section(self):
         """Create the status display section"""
+        # Create a frame to hold both the status text and clear button
+        status_frame = ctk.CTkFrame(self.main_frame)
+        status_frame.pack(fill="x", padx=10, pady=10)
+        
+        # Add clear button
+        self.clear_btn = ctk.CTkButton(
+            status_frame,
+            text="Clear Output",
+            command=self._clear_output,
+            width=100
+        )
+        self.clear_btn.pack(side="bottom", pady=(5, 0))
+        
+        # Create scrollable text box
         self.status_text = ctk.CTkTextbox(
-            self.main_frame,
-            height=200,
+            status_frame,
+            height=150,  # Reduced height
             width=600
         )
-        self.status_text.pack(fill="x", padx=10, pady=10)
+        self.status_text.pack(fill="x", padx=0, pady=(0, 5))
     
     def _browse_folder(self):
         """Handle folder browsing"""
@@ -276,63 +346,198 @@ class UnifiedRunnerGUI(ctk.CTk):
             widget.destroy()
         self.context_widgets.clear()
         
-        # Create new widgets for each context
+        # Add instructions at the top
+        instructions_frame = ctk.CTkFrame(self.context_frame)
+        instructions_frame.pack(fill="x", padx=5, pady=5)
+        
+        instructions_label = ctk.CTkLabel(
+            instructions_frame,
+            text=(
+                "Placement Process for Each Context:\n"
+                "1. Background will be removed automatically\n"
+                "2. Position the image as desired\n"
+                "3. Click 'Confirm Image Position'\n"
+                "4. Position the watermark\n"
+                "5. Click 'Confirm Watermark Position' to finish\n"
+                "\nButton Color Guide:\n"
+                "• Blue - Ready for image placement\n"
+                "• Gold - Image placement confirmed, needs watermark\n"
+                "• Green - Both image and watermark confirmed"
+            ),
+            justify="left"
+        )
+        instructions_label.pack(pady=5, padx=5)
+        
+        # Add Set All button
+        set_all_frame = ctk.CTkFrame(self.context_frame)
+        set_all_frame.pack(fill="x", padx=5, pady=5)
+        
+        set_all_btn = ctk.CTkButton(
+            set_all_frame,
+            text="Set Placement For All",
+            command=self._set_all_placements
+        )
+        set_all_btn.pack(pady=5)
+        
+        # Create new widgets for each context in the scrollable frame
         for context in contexts:
-            frame = ctk.CTkFrame(self.context_frame)
-            frame.pack(fill="x", padx=5, pady=5)
+            frame = ctk.CTkFrame(self.context_scroll)
+            frame.pack(fill="x", padx=5, pady=2)
             
             label = ctk.CTkLabel(frame, text=f"Settings for {context}:")
             label.pack(side="left", padx=5)
             
-            set_btn = ctk.CTkButton(
-                frame,
-                text="Set Placement",
-                command=lambda ctx=context: self._set_context_placement(ctx)
-            )
-            set_btn.pack(side="left", padx=5)
+            button_frame = ctk.CTkFrame(frame)
+            button_frame.pack(side="right", padx=5)
             
-            self.context_widgets[context] = frame
+            set_btn = ctk.CTkButton(
+                button_frame,
+                text="Set Placement",
+                command=lambda ctx=context: self._set_context_placement(ctx),
+                width=100
+            )
+            set_btn.pack(side="left", padx=2)
+            
+            confirm_btn = ctk.CTkButton(
+                button_frame,
+                text="Confirm",
+                command=lambda ctx=context: self._confirm_placement(ctx),
+                width=100,
+                state="disabled"
+            )
+            confirm_btn.pack(side="left", padx=2)
+            
+            # Store both buttons for this context
+            self.context_widgets[context] = {
+                'frame': frame,
+                'set_btn': set_btn,
+                'confirm_btn': confirm_btn,
+                'confirmed': False
+            }
     
     def _set_context_placement(self, context: str):
-        """Open Photoshop to set placement for a context"""
+        """Set placement settings for a context using a sample image"""
+        # Check for watermark first
+        if not os.path.exists(self.watermark_path):
+            self.status_text.insert('end', "Please select a watermark file first\n")
+            return
+            
         folder = self.folder_entry.get()
-        if not folder:
-            self.status_text.insert('end', "Please select a folder first\n")
-            return
-            
-        # Find first image with this context
-        sample_image = None
-        if self.mode_var.get() == "single":
-            for file in os.listdir(folder):
-                if file.lower().endswith(('.jpg', '.jpeg', '.png')):
-                    if self._extract_context(file) == context:
-                        sample_image = os.path.join(folder, file)
-                        break
-        else:
-            for root, _, files in os.walk(folder):
-                for file in files:
-                    if file.lower().endswith(('.jpg', '.jpeg', '.png')):
-                        if self._extract_context(file) == context:
-                            sample_image = os.path.join(root, file)
-                            break
-                if sample_image:
-                    break
-        
-        if not sample_image:
-            self.status_text.insert('end', f"No sample image found for context: {context}\n")
-            return
-            
-        self.status_text.insert('end', f"Setting placement for {context} using {sample_image}...\n")
         
         try:
-            # Get placement settings interactively
-            settings = self.placement_handler.set_placement_interactive(context, sample_image)
-            self.context_settings[context] = settings
+            # Find a sample image for this context
+            sample_image = None
+            if self.mode_var.get() == "single":
+                for file in os.listdir(folder):
+                    if context in file.lower() and file.lower().endswith(('.jpg', '.jpeg', '.png')):
+                        sample_image = os.path.join(folder, file)
+                        break
+            else:
+                for root, _, files in os.walk(folder):
+                    for file in files:
+                        if context in file.lower() and file.lower().endswith(('.jpg', '.jpeg', '.png')):
+                            sample_image = os.path.join(root, file)
+                            break
+                    if sample_image:
+                        break
             
-            self.status_text.insert('end', f"Successfully saved placement settings for {context}\n")
+            if not sample_image:
+                self.status_text.insert('end', f"No sample image found for context: {context}\n")
+                return
             
+            # Convert to Windows path format
+            sample_image = os.path.normpath(sample_image)
+            
+            # Reset confirmation state
+            self.context_widgets[context]['confirmed'] = False
+            confirm_btn = self.context_widgets[context]['confirm_btn']
+            
+            self.status_text.insert('end', f"\nRestarting placement process for {context}:\n")
+            self.status_text.insert('end', "1. Background will be removed automatically\n")
+            self.status_text.insert('end', "2. Position the image as desired\n")
+            self.status_text.insert('end', "3. Click 'Confirm Image Position' when ready\n")
+            self.status_text.insert('end', "4. Position the watermark\n")
+            self.status_text.insert('end', "5. Click 'Confirm Watermark Position' to finish\n\n")
+            self.status_text.insert('end', f"Setting placement for {context} using {sample_image}...\n")
+            
+            try:
+                # Open placement session
+                self.placement_handler.set_placement_interactively(sample_image, context)
+                # Enable confirm button and reset its state
+                confirm_btn.configure(
+                    state="normal",
+                    text="Confirm Image Position",
+                    fg_color="#1f538d",  # Default blue color
+                    hover_color="#2765b0"  # Slightly lighter blue for hover
+                )
+                self.status_text.insert('end', f"Background removed. Position the image in Photoshop, then click 'Confirm Image Position'\n")
+            except Exception as e:
+                self.status_text.insert('end', f"Error setting placement for {context}: {str(e)}\n")
+                self.status_text.insert('end', f"Sample image path: {sample_image}\n")
+                self.status_text.insert('end', "Please check if the file exists and is accessible\n")
+        
         except Exception as e:
-            self.status_text.insert('end', f"Error setting placement for {context}: {str(e)}\n")
+            self.status_text.insert('end', f"Error in _set_context_placement: {str(e)}\n")
+    
+    def _confirm_placement(self, context: str):
+        """Confirm placement settings for a context"""
+        try:
+            # Get settings from current session
+            settings = self.placement_handler.confirm_placement()
+            if settings:
+                self.context_settings[context] = settings
+                
+                # Check if this was the first confirmation (image placement)
+                confirm_btn = self.context_widgets[context]['confirm_btn']
+                if confirm_btn.cget('text') == "Confirm Image Position":
+                    # Update button for watermark confirmation
+                    confirm_btn.configure(
+                        text="Confirm Watermark Position",
+                        fg_color="#b8860b"  # Dark golden color
+                    )
+                    self.status_text.insert('end', f"Image position saved. Now position the watermark and click 'Confirm Watermark Position'\n")
+                else:
+                    # This was the watermark confirmation
+                    self.status_text.insert('end', f"Successfully completed placement settings for {context}\n")
+                    confirm_btn.configure(
+                        state="normal",  # Keep enabled to show completion
+                        text="CONFIRMED",
+                        fg_color="#2e8b57",  # Sea green color
+                        hover_color="#2e8b57"  # Disable hover effect
+                    )
+                    self.context_widgets[context]['confirmed'] = True
+                    
+                    # If this was part of Set All, move to next context
+                    if hasattr(self, '_set_all_queue') and self._set_all_queue:
+                        self._process_next_in_queue()
+            else:
+                self.status_text.insert('end', f"Failed to confirm placement for {context} - no settings returned\n")
+        except Exception as e:
+            self.status_text.insert('end', f"Error confirming placement for {context}: {str(e)}\n")
+    
+    def _set_all_placements(self):
+        """Start the process of setting placement for all contexts"""
+        # Create queue of unconfirmed contexts
+        self._set_all_queue = [
+            context for context, widgets in self.context_widgets.items()
+            if not widgets['confirmed']
+        ]
+        
+        if not self._set_all_queue:
+            self.status_text.insert('end', "All contexts already have placement settings\n")
+            return
+        
+        self.status_text.insert('end', "Starting placement settings for all contexts...\n")
+        self._process_next_in_queue()
+    
+    def _process_next_in_queue(self):
+        """Process the next context in the Set All queue"""
+        if not self._set_all_queue:
+            self.status_text.insert('end', "Finished setting placement for all contexts\n")
+            return
+            
+        next_context = self._set_all_queue.pop(0)
+        self._set_context_placement(next_context)
     
     def _run_processing(self):
         """Run the selected processing operations"""
@@ -377,6 +582,25 @@ class UnifiedRunnerGUI(ctk.CTk):
             # Re-enable buttons
             self.run_btn.configure(state="normal")
             self.analyze_btn.configure(state="normal")
+    
+    def _clear_output(self):
+        """Clear the status text output"""
+        self.status_text.delete('1.0', 'end')
+    
+    def _browse_watermark(self):
+        """Handle watermark file browsing"""
+        file = ctk.filedialog.askopenfilename(
+            filetypes=[
+                ("Image files", "*.png;*.jpg;*.jpeg"),
+                ("All files", "*.*")
+            ]
+        )
+        if file:
+            self.watermark_path = file
+            self.watermark_entry.delete(0, 'end')
+            self.watermark_entry.insert(0, file)
+            # Update the handler with new watermark path
+            self.placement_handler.watermark_path = file
 
 if __name__ == "__main__":
     app = UnifiedRunnerGUI()
