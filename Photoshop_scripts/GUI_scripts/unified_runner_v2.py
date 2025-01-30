@@ -469,11 +469,15 @@ class UnifiedRunnerGUI(ctk.CTk):
             
             self.status_text.insert('end', f"\nRestarting placement process for {context}:\n")
             self.status_text.insert('end', "1. Background will be removed automatically\n")
-            self.status_text.insert('end', "2. Position the image as desired\n")
-            self.status_text.insert('end', "3. Click 'Confirm Image Position' when ready\n")
-            self.status_text.insert('end', "4. Position the watermark\n")
-            self.status_text.insert('end', "5. Click 'Confirm Watermark Position' to finish\n\n")
-            self.status_text.insert('end', f"Setting placement for {context} using {sample_image}...\n")
+            self.status_text.insert('end', "2. Position and resize the image as desired\n")
+            self.status_text.insert('end', "3. If you resized or rotated the image:\n")
+            self.status_text.insert('end', "   - Click the checkmark (✓) in Photoshop\n")
+            self.status_text.insert('end', "   - Or press Enter\n")
+            self.status_text.insert('end', "   - Or click outside the transform box\n")
+            self.status_text.insert('end', "4. AFTER committing any changes, click 'Confirm Image Position'\n")
+            self.status_text.insert('end', "5. Position the watermark\n")
+            self.status_text.insert('end', "6. If you resized the watermark, commit changes as in step 3\n")
+            self.status_text.insert('end', "7. AFTER committing any changes, click 'Confirm Watermark Position'\n\n")
             
             try:
                 # Open placement session
@@ -485,7 +489,8 @@ class UnifiedRunnerGUI(ctk.CTk):
                     fg_color="#1f538d",  # Default blue color
                     hover_color="#2765b0"  # Slightly lighter blue for hover
                 )
-                self.status_text.insert('end', f"Background removed. Position the image in Photoshop, then click 'Confirm Image Position'\n")
+                self.status_text.insert('end', f"Background removed. Position the image in Photoshop.\n")
+                self.status_text.insert('end', f"⚠️ If you resize/rotate, commit the changes (✓ or Enter) BEFORE clicking 'Confirm Image Position'\n")
             except Exception as e:
                 self.status_text.insert('end', "\n" + "="*50 + "\n")
                 self.status_text.insert('end', f"❌ ERROR setting placement for {context}: {str(e)}\n")
@@ -527,7 +532,8 @@ class UnifiedRunnerGUI(ctk.CTk):
                         fg_color="#b8860b",  # Dark golden color
                         state="normal"
                     )
-                    self.status_text.insert('end', f"Image position saved. Now position the watermark and click 'Confirm Watermark Position'\n")
+                    self.status_text.insert('end', f"Image position saved. Now position the watermark.\n")
+                    self.status_text.insert('end', f"⚠️ If you resize/rotate the watermark, commit the changes (✓ or Enter) BEFORE clicking 'Confirm Watermark Position'\n")
                 else:
                     # This was the watermark confirmation
                     if 'output_path' in settings:
