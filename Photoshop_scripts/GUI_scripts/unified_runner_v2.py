@@ -417,14 +417,27 @@ class UnifiedRunnerGUI(ctk.CTk):
     
     def _set_context_placement(self, context: str):
         """Set placement settings for a context using a sample image"""
+        # Check if there's an active session
+        if self.placement_handler.has_active_session():
+            self.status_text.insert('end', "\n" + "="*50 + "\n")
+            self.status_text.insert('end', "⚠️ Please complete the current placement before starting another!\n")
+            self.status_text.insert('end', "="*50 + "\n\n")
+            return
+            
         # Check for watermark first
         if not os.path.exists(self.watermark_path):
-            self.status_text.insert('end', "Please select a watermark file first\n")
+            self.status_text.insert('end', "\n" + "="*50 + "\n")
+            self.status_text.insert('end', "❌ ERROR: Please select a watermark file first\n")
+            self.status_text.insert('end', "="*50 + "\n\n")
             return
             
         folder = self.folder_entry.get()
         
         try:
+            # Disable all Set Placement buttons during processing
+            for widgets in self.context_widgets.values():
+                widgets['set_btn'].configure(state="disabled")
+            
             # Find a sample image for this context
             sample_image = None
             if self.mode_var.get() == "single":
@@ -442,7 +455,9 @@ class UnifiedRunnerGUI(ctk.CTk):
                         break
             
             if not sample_image:
-                self.status_text.insert('end', f"No sample image found for context: {context}\n")
+                self.status_text.insert('end', "\n" + "="*50 + "\n")
+                self.status_text.insert('end', f"❌ ERROR: No sample image found for context: {context}\n")
+                self.status_text.insert('end', "="*50 + "\n\n")
                 return
             
             # Convert to Windows path format
@@ -472,16 +487,32 @@ class UnifiedRunnerGUI(ctk.CTk):
                 )
                 self.status_text.insert('end', f"Background removed. Position the image in Photoshop, then click 'Confirm Image Position'\n")
             except Exception as e:
-                self.status_text.insert('end', f"Error setting placement for {context}: {str(e)}\n")
+                self.status_text.insert('end', "\n" + "="*50 + "\n")
+                self.status_text.insert('end', f"❌ ERROR setting placement for {context}: {str(e)}\n")
                 self.status_text.insert('end', f"Sample image path: {sample_image}\n")
                 self.status_text.insert('end', "Please check if the file exists and is accessible\n")
+                self.status_text.insert('end', "="*50 + "\n\n")
         
         except Exception as e:
-            self.status_text.insert('end', f"Error in _set_context_placement: {str(e)}\n")
+            self.status_text.insert('end', "\n" + "="*50 + "\n")
+            self.status_text.insert('end', f"❌ ERROR in _set_context_placement: {str(e)}\n")
+            self.status_text.insert('end', "="*50 + "\n\n")
+        finally:
+            # Re-enable all Set Placement buttons
+            for widgets in self.context_widgets.values():
+                widgets['set_btn'].configure(state="normal")
     
     def _confirm_placement(self, context: str):
         """Confirm placement settings for a context"""
         try:
+            self.status_text.insert('end', f"Confirming placement for {context}...\n")
+            
+            # Disable all buttons during confirmation
+            for widgets in self.context_widgets.values():
+                widgets['set_btn'].configure(state="disabled")
+                if widgets['confirm_btn'].cget('text') != "CONFIRMED":
+                    widgets['confirm_btn'].configure(state="disabled")
+            
             # Get settings from current session
             settings = self.placement_handler.confirm_placement()
             if settings:
@@ -493,27 +524,47 @@ class UnifiedRunnerGUI(ctk.CTk):
                     # Update button for watermark confirmation
                     confirm_btn.configure(
                         text="Confirm Watermark Position",
-                        fg_color="#b8860b"  # Dark golden color
+                        fg_color="#b8860b",  # Dark golden color
+                        state="normal"
                     )
                     self.status_text.insert('end', f"Image position saved. Now position the watermark and click 'Confirm Watermark Position'\n")
                 else:
                     # This was the watermark confirmation
-                    self.status_text.insert('end', f"Successfully completed placement settings for {context}\n")
-                    confirm_btn.configure(
-                        state="normal",  # Keep enabled to show completion
-                        text="CONFIRMED",
-                        fg_color="#2e8b57",  # Sea green color
-                        hover_color="#2e8b57"  # Disable hover effect
-                    )
-                    self.context_widgets[context]['confirmed'] = True
-                    
-                    # If this was part of Set All, move to next context
-                    if hasattr(self, '_set_all_queue') and self._set_all_queue:
-                        self._process_next_in_queue()
+                    if 'output_path' in settings:
+                        self.status_text.insert('end', f"Successfully completed placement settings for {context}\n")
+                        self.status_text.insert('end', f"Saved processed image to: {settings['output_path']}\n")
+                        
+                        confirm_btn.configure(
+                            state="normal",  # Keep enabled to show completion
+                            text="CONFIRMED",
+                            fg_color="#2e8b57",  # Sea green color
+                            hover_color="#2e8b57"  # Disable hover effect
+                        )
+                        self.context_widgets[context]['confirmed'] = True
+                        
+                        # If this was part of Set All, move to next context
+                        if hasattr(self, '_set_all_queue') and self._set_all_queue:
+                            self._process_next_in_queue()
+                    else:
+                        self.status_text.insert('end', "\n" + "="*50 + "\n")
+                        self.status_text.insert('end', f"❌ ERROR: Failed to save processed image for {context}\n")
+                        self.status_text.insert('end', "Please try setting placement again\n")
+                        self.status_text.insert('end', "="*50 + "\n\n")
             else:
-                self.status_text.insert('end', f"Failed to confirm placement for {context} - no settings returned\n")
+                self.status_text.insert('end', "\n" + "="*50 + "\n")
+                self.status_text.insert('end', f"❌ ERROR: Failed to confirm placement for {context} - no settings returned\n")
+                self.status_text.insert('end', "="*50 + "\n\n")
         except Exception as e:
-            self.status_text.insert('end', f"Error confirming placement for {context}: {str(e)}\n")
+            self.status_text.insert('end', "\n" + "="*50 + "\n")
+            self.status_text.insert('end', f"❌ ERROR confirming placement for {context}: {str(e)}\n")
+            self.status_text.insert('end', "Please try setting placement again\n")
+            self.status_text.insert('end', "="*50 + "\n\n")
+        finally:
+            # Re-enable all Set Placement buttons and valid Confirm buttons
+            for widgets in self.context_widgets.values():
+                widgets['set_btn'].configure(state="normal")
+                if not widgets['confirmed']:  # Don't re-enable confirmed buttons
+                    widgets['confirm_btn'].configure(state="normal")
     
     def _set_all_placements(self):
         """Start the process of setting placement for all contexts"""

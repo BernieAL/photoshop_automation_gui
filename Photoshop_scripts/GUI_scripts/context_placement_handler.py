@@ -21,6 +21,7 @@ class ContextPlacementHandler:
         )
         self._ensure_settings_file()
         self.current_settings = None  # Store current unconfirmed settings
+        self.current_image_path = None  # Store path of current image being processed
         
     def _ensure_settings_file(self):
         """Ensure settings directory and file exist"""
@@ -121,6 +122,12 @@ class ContextPlacementHandler:
             image_path: Path to the sample image
             context: Context identifier (e.g., 'front', 'back')
         """
+        # Add delay before starting new session
+        time.sleep(2)
+        
+        # Store current image path
+        self.current_image_path = image_path
+        
         # Validate paths
         if not os.path.exists(image_path):
             raise FileNotFoundError(f"Sample image not found: {image_path}")
@@ -169,6 +176,8 @@ class ContextPlacementHandler:
             print(f"Image path: {image_path}")
             print(f"Template path: {self.template_path}")
             self.current_settings = None
+            # Add delay on error
+            time.sleep(2)
             raise
     
     def confirm_placement(self) -> Dict:
@@ -179,7 +188,7 @@ class ContextPlacementHandler:
             Dict containing placement settings
         """
         if not self.current_settings:
-            raise Exception("No active placement session")
+            raise Exception("No active session to save")
             
         try:
             img_layer = self.current_settings['layer']
@@ -207,7 +216,9 @@ class ContextPlacementHandler:
                 if not self.current_settings.get('has_watermark'):
                     if not self.watermark_path or not os.path.exists(self.watermark_path):
                         raise Exception("No valid watermark path provided")
-                        
+                    
+                    print("Adding watermark...")  # Debug print
+                    
                     # Add watermark
                     desc = ps.ActionDescriptor
                     desc.putPath(ps.app.charIDToTypeID("null"), self.watermark_path)
@@ -219,12 +230,13 @@ class ContextPlacementHandler:
                     
                     # Store that we've added the watermark
                     self.current_settings['has_watermark'] = True
+                    print("Watermark added successfully")  # Debug print
                     
                     # Return without cleaning up so user can position watermark
                     return settings
                 
             except Exception as e:
-                print(f"Warning: Could not get layer properties, using initial values: {str(e)}")
+                print(f"Warning during layer property access: {str(e)}")
                 # If we can't get the final state, use initial values
                 settings = {
                     'size': [100, 100],
@@ -235,24 +247,63 @@ class ContextPlacementHandler:
             # Store settings before cleanup
             final_settings = settings
             
-            # Only do cleanup on final confirmation (after watermark)
+            # Only do cleanup and save on final confirmation (after watermark)
             if self.current_settings.get('has_watermark'):
                 try:
-                    if ps and ps.active_document:
-                        # Remove both image and watermark layers
-                        while len(ps.active_document.artLayers) > 1:  # Keep template layer
-                            ps.active_document.artLayers[0].remove()
+                    print("Starting final save process...")  # Debug print
+                    
+                    if not self.current_image_path:
+                        raise Exception("No current image path available")
+                    
+                    # Create output directory and prepare path
+                    output_dir = os.path.join(os.path.dirname(self.current_image_path), "processed_output")
+                    os.makedirs(output_dir, exist_ok=True)
+                    output_path = os.path.join(output_dir, f"{os.path.splitext(os.path.basename(self.current_image_path))[0]}-processed.jpg")
+                    
+                    print(f"Saving to: {output_path}")  # Debug print
+                    
+                    # Save as JPG with maximum quality
+                    options = ps.JPEGSaveOptions(quality=12)
+                    ps.active_document.saveAs(output_path, options, asCopy=True)
+                    time.sleep(1.5)  # Wait for save to complete
+                    
+                    print("Save completed successfully")  # Debug print
+                    
+                    # Store output path in settings for UI feedback
+                    final_settings['output_path'] = output_path
+                    
+                    print("Cleaning up layers...")  # Debug print
+                    
+                    # Remove both image and watermark layers after saving
+                    while len(ps.active_document.artLayers) > 1:  # Keep template layer
+                        ps.active_document.artLayers[0].remove()
+                        time.sleep(0.5)  # Small delay between layer removals
+                    
+                    print("Cleanup completed")  # Debug print
+                    
                 except Exception as e:
-                    print(f"Warning: Non-critical error during cleanup: {str(e)}")
-                
-                # Clear current settings only after watermark is done
-                self.current_settings = None
+                    print(f"Error during save/cleanup: {str(e)}")
+                    print(f"Current image path: {self.current_image_path}")
+                    raise  # Re-raise the exception to handle it in the UI
+                finally:
+                    # Clear current settings only after everything is done
+                    print("Clearing session state...")  # Debug print
+                    self.current_settings = None
+                    self.current_image_path = None
+                    # Add delay before next operation
+                    time.sleep(2)
             
             return final_settings
             
         except Exception as e:
-            print(f"Error confirming placement: {str(e)}")
-            self.current_settings = None
+            print(f"Error in confirm_placement: {str(e)}")
+            # Don't clear settings on error unless it was the final confirmation
+            if self.current_settings and self.current_settings.get('has_watermark'):
+                print("Clearing session state due to error in final confirmation")  # Debug print
+                self.current_settings = None
+                self.current_image_path = None
+                # Add delay on error too
+                time.sleep(2)
             raise
     
     def has_active_session(self) -> bool:
