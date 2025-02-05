@@ -102,7 +102,26 @@ class UnifiedRunnerGUI(ctk.CTk):
         )
         title_label.pack(pady=5)
         
-        # Watermark Path
+        # Template/Background Path
+        template_frame = ctk.CTkFrame(config_frame)
+        template_frame.pack(fill="x", padx=5, pady=5)
+        
+        template_label = ctk.CTkLabel(template_frame, text="Background Template: (if any)")
+        template_label.pack(side="left", padx=5)
+        
+        self.template_entry = ctk.CTkEntry(template_frame, width=400)
+        self.template_entry.pack(side="left", padx=5, fill="x", expand=True)
+        self.template_entry.insert(0, self.template_path)
+        
+        template_browse = ctk.CTkButton(
+            template_frame,
+            text="Browse",
+            command=self._browse_template,
+            width=100
+        )
+        template_browse.pack(side="right", padx=5)
+        
+        # Watermark Path and Setup
         watermark_frame = ctk.CTkFrame(config_frame)
         watermark_frame.pack(fill="x", padx=5, pady=5)
         
@@ -120,6 +139,43 @@ class UnifiedRunnerGUI(ctk.CTk):
             width=100
         )
         watermark_browse.pack(side="right", padx=5)
+        
+        # Watermark Position Mode
+        watermark_mode_frame = ctk.CTkFrame(config_frame)
+        watermark_mode_frame.pack(fill="x", padx=5, pady=5)
+        
+        self.watermark_mode_var = ctk.BooleanVar(value=False)  # Changed from True to False
+        
+        watermark_mode_checkbox = ctk.CTkCheckBox(
+            watermark_mode_frame,
+            text="Use default watermark position for all images",
+            variable=self.watermark_mode_var,
+            command=self._on_watermark_mode_change
+        )
+        watermark_mode_checkbox.pack(pady=2)
+        
+        # Watermark Position Setup Button (for default mode)
+        self.watermark_setup_frame = ctk.CTkFrame(config_frame)
+        self.watermark_setup_frame.pack(fill="x", padx=5, pady=5)
+        
+        self.watermark_position_btn = ctk.CTkButton(
+            self.watermark_setup_frame,
+            text="Set Default Watermark Position",
+            command=self._setup_watermark_position,
+            width=200
+        )
+        self.watermark_position_btn.pack(pady=5)
+        
+        # Label to show watermark position status
+        self.watermark_status_label = ctk.CTkLabel(
+            self.watermark_setup_frame,
+            text="❌ Watermark position not set",
+            text_color="red"
+        )
+        self.watermark_status_label.pack(pady=2)
+        
+        # Store watermark settings
+        self.watermark_settings = None
     
     def _create_folder_section(self):
         """Create the folder selection section"""
@@ -355,29 +411,46 @@ class UnifiedRunnerGUI(ctk.CTk):
             text=(
                 "Placement Process for Each Context:\n"
                 "1. Background will be removed automatically\n"
-                "2. Position the image as desired\n"
-                "3. Click 'Confirm Image Position'\n"
-                "4. Position the watermark\n"
-                "5. Click 'Confirm Watermark Position' to finish\n"
+                "2. Position and resize the image as desired\n"
+                "3. If you resize/rotate the image:\n"
+                "   - Click the checkmark (✓) in Photoshop\n"
+                "   - Or press Enter\n"
+                "   - Or click outside the transform box\n"
+                "4. Click 'Confirm' to save the placement\n"
                 "\nButton Color Guide:\n"
-                "• Blue - Ready for image placement\n"
-                "• Gold - Image placement confirmed, needs watermark\n"
-                "• Green - Both image and watermark confirmed"
+                "• Blue - Ready for placement\n"
+                "• Green - Placement confirmed\n"
+                "\nIMPORTANT: After setting all placements,\n"
+                "click 'Run Processing' to create the output files.\n"
+                "Previous output files will be overwritten."
             ),
             justify="left"
         )
         instructions_label.pack(pady=5, padx=5)
         
-        # Add Set All button
-        set_all_frame = ctk.CTkFrame(self.context_frame)
-        set_all_frame.pack(fill="x", padx=5, pady=5)
+        # Add action buttons frame
+        action_frame = ctk.CTkFrame(self.context_frame)
+        action_frame.pack(fill="x", padx=5, pady=5)
         
+        # Add Set All button
         set_all_btn = ctk.CTkButton(
-            set_all_frame,
+            action_frame,
             text="Set Placement For All",
-            command=self._set_all_placements
+            command=self._set_all_placements,
+            width=200
         )
-        set_all_btn.pack(pady=5)
+        set_all_btn.pack(side="left", padx=5, pady=5)
+        
+        # Add Reset All button
+        reset_all_btn = ctk.CTkButton(
+            action_frame,
+            text="Reset All Placements",
+            command=self._reset_all_placements,
+            width=200,
+            fg_color="#8B0000",  # Dark red
+            hover_color="#A52A2A"  # Brown
+        )
+        reset_all_btn.pack(side="right", padx=5, pady=5)
         
         # Create new widgets for each context in the scrollable frame
         for context in contexts:
@@ -389,6 +462,17 @@ class UnifiedRunnerGUI(ctk.CTk):
             
             button_frame = ctk.CTkFrame(frame)
             button_frame.pack(side="right", padx=5)
+            
+            # Add Reset button
+            reset_btn = ctk.CTkButton(
+                button_frame,
+                text="Reset",
+                command=lambda ctx=context: self._reset_context_placement(ctx),
+                width=70,
+                fg_color="#8B0000",  # Dark red
+                hover_color="#A52A2A"  # Brown
+            )
+            reset_btn.pack(side="left", padx=2)
             
             set_btn = ctk.CTkButton(
                 button_frame,
@@ -407,13 +491,77 @@ class UnifiedRunnerGUI(ctk.CTk):
             )
             confirm_btn.pack(side="left", padx=2)
             
-            # Store both buttons for this context
+            # Add Copy Settings To All button (initially hidden)
+            copy_btn = ctk.CTkButton(
+                button_frame,
+                text="Copy Settings To All",
+                command=lambda ctx=context: self._copy_settings_to_all(ctx),
+                width=150,
+                fg_color="#4B0082",  # Indigo
+                hover_color="#663399"  # Rebecca Purple
+            )
+            # Will be packed when context is confirmed
+            
+            # Store buttons for this context
             self.context_widgets[context] = {
                 'frame': frame,
+                'reset_btn': reset_btn,
                 'set_btn': set_btn,
                 'confirm_btn': confirm_btn,
+                'copy_btn': copy_btn,
                 'confirmed': False
             }
+            
+    def _reset_context_placement(self, context: str):
+        """Reset placement settings for a specific context"""
+        try:
+            # Remove context from settings
+            if context in self.context_settings:
+                del self.context_settings[context]
+            
+            # Reset button states
+            widgets = self.context_widgets[context]
+            widgets['confirmed'] = False
+            widgets['confirm_btn'].configure(
+                state="disabled",
+                text="Confirm",
+                fg_color="#1f538d",  # Default blue
+                hover_color="#2765b0"
+            )
+            # Hide Copy Settings To All button
+            widgets['copy_btn'].pack_forget()
+            
+            self.status_text.insert('end', f"Reset placement settings for {context}\n")
+            
+        except Exception as e:
+            self.status_text.insert('end', "\n" + "="*50 + "\n")
+            self.status_text.insert('end', f"❌ ERROR resetting {context}: {str(e)}\n")
+            self.status_text.insert('end', "="*50 + "\n\n")
+            
+    def _reset_all_placements(self):
+        """Reset all placement settings"""
+        try:
+            # Clear all settings
+            self.context_settings.clear()
+            
+            # Reset all button states
+            for context, widgets in self.context_widgets.items():
+                widgets['confirmed'] = False
+                widgets['confirm_btn'].configure(
+                    state="disabled",
+                    text="Confirm",
+                    fg_color="#1f538d",  # Default blue
+                    hover_color="#2765b0"
+                )
+                # Hide Copy Settings To All button
+                widgets['copy_btn'].pack_forget()
+            
+            self.status_text.insert('end', "Reset all placement settings\n")
+            
+        except Exception as e:
+            self.status_text.insert('end', "\n" + "="*50 + "\n")
+            self.status_text.insert('end', f"❌ ERROR resetting all placements: {str(e)}\n")
+            self.status_text.insert('end', "="*50 + "\n\n")
     
     def _set_context_placement(self, context: str):
         """Set placement settings for a context using a sample image"""
@@ -421,13 +569,6 @@ class UnifiedRunnerGUI(ctk.CTk):
         if self.placement_handler.has_active_session():
             self.status_text.insert('end', "\n" + "="*50 + "\n")
             self.status_text.insert('end', "⚠️ Please complete the current placement before starting another!\n")
-            self.status_text.insert('end', "="*50 + "\n\n")
-            return
-            
-        # Check for watermark first
-        if not os.path.exists(self.watermark_path):
-            self.status_text.insert('end', "\n" + "="*50 + "\n")
-            self.status_text.insert('end', "❌ ERROR: Please select a watermark file first\n")
             self.status_text.insert('end', "="*50 + "\n\n")
             return
             
@@ -467,17 +608,14 @@ class UnifiedRunnerGUI(ctk.CTk):
             self.context_widgets[context]['confirmed'] = False
             confirm_btn = self.context_widgets[context]['confirm_btn']
             
-            self.status_text.insert('end', f"\nRestarting placement process for {context}:\n")
+            self.status_text.insert('end', f"\nSetting up placement for {context}:\n")
             self.status_text.insert('end', "1. Background will be removed automatically\n")
             self.status_text.insert('end', "2. Position and resize the image as desired\n")
-            self.status_text.insert('end', "3. If you resized or rotated the image:\n")
+            self.status_text.insert('end', "3. If you resize/rotate the image:\n")
             self.status_text.insert('end', "   - Click the checkmark (✓) in Photoshop\n")
             self.status_text.insert('end', "   - Or press Enter\n")
             self.status_text.insert('end', "   - Or click outside the transform box\n")
-            self.status_text.insert('end', "4. AFTER committing any changes, click 'Confirm Image Position'\n")
-            self.status_text.insert('end', "5. Position the watermark\n")
-            self.status_text.insert('end', "6. If you resized the watermark, commit changes as in step 3\n")
-            self.status_text.insert('end', "7. AFTER committing any changes, click 'Confirm Watermark Position'\n\n")
+            self.status_text.insert('end', "4. Click 'Confirm' to save the placement\n\n")
             
             try:
                 # Open placement session
@@ -485,12 +623,12 @@ class UnifiedRunnerGUI(ctk.CTk):
                 # Enable confirm button and reset its state
                 confirm_btn.configure(
                     state="normal",
-                    text="Confirm Image Position",
+                    text="Confirm",
                     fg_color="#1f538d",  # Default blue color
                     hover_color="#2765b0"  # Slightly lighter blue for hover
                 )
                 self.status_text.insert('end', f"Background removed. Position the image in Photoshop.\n")
-                self.status_text.insert('end', f"⚠️ If you resize/rotate, commit the changes (✓ or Enter) BEFORE clicking 'Confirm Image Position'\n")
+                self.status_text.insert('end', f"⚠️ If you resize/rotate, commit the changes (✓ or Enter) BEFORE clicking 'Confirm'\n")
             except Exception as e:
                 self.status_text.insert('end', "\n" + "="*50 + "\n")
                 self.status_text.insert('end', f"❌ ERROR setting placement for {context}: {str(e)}\n")
@@ -518,28 +656,27 @@ class UnifiedRunnerGUI(ctk.CTk):
                 if widgets['confirm_btn'].cget('text') != "CONFIRMED":
                     widgets['confirm_btn'].configure(state="disabled")
             
+            # Check if we have an active session
+            if not self.placement_handler.has_active_session():
+                self.status_text.insert('end', "\n" + "="*50 + "\n")
+                self.status_text.insert('end', "❌ ERROR: No active placement session\n")
+                self.status_text.insert('end', "Please click 'Set Placement' to start a new session\n")
+                self.status_text.insert('end', "="*50 + "\n\n")
+                return
+            
             # Get settings from current session
             settings = self.placement_handler.confirm_placement()
             if settings:
-                self.context_settings[context] = settings
-                
-                # Check if this was the first confirmation (image placement)
-                confirm_btn = self.context_widgets[context]['confirm_btn']
-                if confirm_btn.cget('text') == "Confirm Image Position":
-                    # Update button for watermark confirmation
-                    confirm_btn.configure(
-                        text="Confirm Watermark Position",
-                        fg_color="#b8860b",  # Dark golden color
-                        state="normal"
-                    )
-                    self.status_text.insert('end', f"Image position saved. Now position the watermark.\n")
-                    self.status_text.insert('end', f"⚠️ If you resize/rotate the watermark, commit the changes (✓ or Enter) BEFORE clicking 'Confirm Watermark Position'\n")
-                else:
-                    # This was the watermark confirmation
+                # Store settings
+                if 'watermark' in settings:
+                    # This was the final confirmation with watermark settings
+                    self.context_settings[context] = settings
+                    
                     if 'output_path' in settings:
-                        self.status_text.insert('end', f"Successfully completed placement settings for {context}\n")
-                        self.status_text.insert('end', f"Saved processed image to: {settings['output_path']}\n")
+                        self.status_text.insert('end', f"Successfully completed placement and watermark settings for {context}\n")
+                        self.status_text.insert('end', "⚠️ Remember to click 'Run Processing' to create the output files\n")
                         
+                        confirm_btn = self.context_widgets[context]['confirm_btn']
                         confirm_btn.configure(
                             state="normal",  # Keep enabled to show completion
                             text="CONFIRMED",
@@ -548,14 +685,54 @@ class UnifiedRunnerGUI(ctk.CTk):
                         )
                         self.context_widgets[context]['confirmed'] = True
                         
+                        # Show Copy Settings To All button
+                        self.context_widgets[context]['copy_btn'].pack(side="left", padx=2)
+                        
                         # If this was part of Set All, move to next context
                         if hasattr(self, '_set_all_queue') and self._set_all_queue:
                             self._process_next_in_queue()
                     else:
                         self.status_text.insert('end', "\n" + "="*50 + "\n")
-                        self.status_text.insert('end', f"❌ ERROR: Failed to save processed image for {context}\n")
+                        self.status_text.insert('end', f"❌ ERROR: Failed to save settings for {context}\n")
                         self.status_text.insert('end', "Please try setting placement again\n")
                         self.status_text.insert('end', "="*50 + "\n\n")
+                else:
+                    # This was the first confirmation, now waiting for watermark
+                    if not self.watermark_mode_var.get():  # Individual watermark mode
+                        self.context_settings[context] = settings  # Store initial settings
+                        confirm_btn = self.context_widgets[context]['confirm_btn']
+                        confirm_btn.configure(
+                            text="Confirm Watermark",
+                            fg_color="#b8860b",  # Dark golden color
+                            state="normal"
+                        )
+                        self.status_text.insert('end', f"Image position saved. Now position the watermark.\n")
+                        self.status_text.insert('end', "Watermark Adjustment Options:\n")
+                        self.status_text.insert('end', "- Resize the watermark by dragging the corners\n")
+                        self.status_text.insert('end', "- Move to desired position\n")
+                        self.status_text.insert('end', "- Adjust opacity in the Layers panel\n\n")
+                        self.status_text.insert('end', f"⚠️ After making adjustments, commit the changes (✓ or Enter) BEFORE clicking 'Confirm Watermark'\n")
+                        
+                        # Start watermark placement session
+                        self.placement_handler.start_watermark_placement()
+                    else:
+                        # In default watermark mode, complete immediately
+                        self.context_settings[context] = settings
+                        if 'output_path' in settings:
+                            self.status_text.insert('end', f"Successfully completed placement settings for {context}\n")
+                            
+                            confirm_btn = self.context_widgets[context]['confirm_btn']
+                            confirm_btn.configure(
+                                state="normal",  # Keep enabled to show completion
+                                text="CONFIRMED",
+                                fg_color="#2e8b57",  # Sea green color
+                                hover_color="#2e8b57"  # Disable hover effect
+                            )
+                            self.context_widgets[context]['confirmed'] = True
+                            
+                            # If this was part of Set All, move to next context
+                            if hasattr(self, '_set_all_queue') and self._set_all_queue:
+                                self._process_next_in_queue()
             else:
                 self.status_text.insert('end', "\n" + "="*50 + "\n")
                 self.status_text.insert('end', f"❌ ERROR: Failed to confirm placement for {context} - no settings returned\n")
@@ -606,6 +783,29 @@ class UnifiedRunnerGUI(ctk.CTk):
         if not folder:
             self.status_text.insert('end', "Please select a folder first\n")
             return
+            
+        # Check watermark requirements
+        needs_watermark = ("Add Watermark ONLY" in self.processing_options or 
+                         "Custom Placement + Background Removal + Watermark" in self.processing_options)
+        
+        if needs_watermark:
+            if self.watermark_mode_var.get():  # Using default watermark position
+                if not self.watermark_settings:
+                    self.status_text.insert('end', "\n" + "="*50 + "\n")
+                    self.status_text.insert('end', "❌ ERROR: Please set the default watermark position first\n")
+                    self.status_text.insert('end', "="*50 + "\n\n")
+                    return
+            else:  # Using individual watermark positions
+                # Get watermark settings from the first context that has them
+                for context_settings in self.context_settings.values():
+                    if 'watermark' in context_settings:
+                        self.watermark_settings = context_settings['watermark']
+                        break
+                if not self.watermark_settings:
+                    self.status_text.insert('end', "\n" + "="*50 + "\n")
+                    self.status_text.insert('end', "❌ ERROR: No watermark settings found in any context\n")
+                    self.status_text.insert('end', "="*50 + "\n\n")
+                    return
         
         # Clear status text
         self.status_text.delete('1.0', 'end')
@@ -620,6 +820,10 @@ class UnifiedRunnerGUI(ctk.CTk):
                 self.status_text.insert('end', f"{msg}\n")
                 self.status_text.see('end')
                 self.update()  # Update GUI
+            
+            # Pass watermark settings to image processor
+            if self.watermark_settings:
+                self.image_processor.set_watermark_settings(self.watermark_settings)
             
             # Run processing
             self.image_processor.process_images(
@@ -658,6 +862,102 @@ class UnifiedRunnerGUI(ctk.CTk):
             self.watermark_entry.insert(0, file)
             # Update the handler with new watermark path
             self.placement_handler.watermark_path = file
+
+    def _browse_template(self):
+        """Handle template/background file browsing"""
+        file = ctk.filedialog.askopenfilename(
+            filetypes=[
+                ("Image files", "*.png;*.jpg;*.jpeg;*.psd"),
+                ("All files", "*.*")
+            ]
+        )
+        if file:
+            self.template_path = file
+            self.template_entry.delete(0, 'end')
+            self.template_entry.insert(0, file)
+            # Update handlers with new template path
+            self.placement_handler.template_path = file
+            self.image_processor.template_path = file
+
+    def _setup_watermark_position(self):
+        """Set up the default watermark position that will be used for all images"""
+        if not os.path.exists(self.watermark_path):
+            self.status_text.insert('end', "\n" + "="*50 + "\n")
+            self.status_text.insert('end', "❌ ERROR: Please select a watermark file first\n")
+            self.status_text.insert('end', "="*50 + "\n\n")
+            return
+            
+        try:
+            self.status_text.insert('end', "\nSetting up default watermark position...\n")
+            
+            # Use the new capture_watermark_settings method
+            if self.image_processor.capture_watermark_settings(
+                status_callback=lambda msg: self.status_text.insert('end', msg + "\n")
+            ):
+                # Update status
+                self.watermark_status_label.configure(
+                    text="✅ Watermark position set",
+                    text_color="green"
+                )
+                self.watermark_settings = self.image_processor.watermark_settings
+            else:
+                self.status_text.insert('end', "\n" + "="*50 + "\n")
+                self.status_text.insert('end', "❌ Failed to capture watermark settings\n")
+                self.status_text.insert('end', "="*50 + "\n\n")
+                
+        except Exception as e:
+            self.status_text.insert('end', "\n" + "="*50 + "\n")
+            self.status_text.insert('end', f"❌ ERROR setting up watermark: {str(e)}\n")
+            self.status_text.insert('end', "="*50 + "\n\n")
+
+    def _on_watermark_mode_change(self):
+        """Handle watermark mode change"""
+        if self.watermark_mode_var.get():
+            # Show default watermark setup
+            self.watermark_setup_frame.pack(fill="x", padx=5, pady=5)
+        else:
+            # Hide default watermark setup
+            self.watermark_setup_frame.pack_forget()
+            # Clear default watermark settings
+            self.watermark_settings = None
+            self.watermark_status_label.configure(
+                text="❌ Individual watermark positioning enabled",
+                text_color="orange"
+            )
+            
+    def _copy_settings_to_all(self, source_context: str):
+        """Copy placement settings from one context to all others"""
+        try:
+            if source_context not in self.context_settings:
+                self.status_text.insert('end', "\n" + "="*50 + "\n")
+                self.status_text.insert('end', f"❌ ERROR: No settings found for {source_context}\n")
+                self.status_text.insert('end', "="*50 + "\n\n")
+                return
+                
+            source_settings = self.context_settings[source_context]
+            
+            # Apply to all unconfirmed contexts
+            for context, widgets in self.context_widgets.items():
+                if context != source_context and not widgets['confirmed']:
+                    # Copy settings but preserve context-specific info
+                    self.context_settings[context] = source_settings.copy()
+                    
+                    # Update button states
+                    widgets['confirmed'] = True
+                    widgets['confirm_btn'].configure(
+                        state="normal",
+                        text="CONFIRMED",
+                        fg_color="#2e8b57",  # Sea green color
+                        hover_color="#2e8b57"  # Disable hover effect
+                    )
+            
+            self.status_text.insert('end', f"Successfully copied settings from {source_context} to all other contexts\n")
+            self.status_text.insert('end', "⚠️ Remember to click 'Run Processing' to create the output files\n")
+            
+        except Exception as e:
+            self.status_text.insert('end', "\n" + "="*50 + "\n")
+            self.status_text.insert('end', f"❌ ERROR copying settings: {str(e)}\n")
+            self.status_text.insert('end', "="*50 + "\n\n")
 
 if __name__ == "__main__":
     app = UnifiedRunnerGUI()

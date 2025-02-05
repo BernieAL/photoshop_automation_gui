@@ -187,6 +187,35 @@ class ContextPlacementHandler:
             time.sleep(2)
             raise
     
+    def start_watermark_placement(self):
+        """Start the watermark placement phase of the session"""
+        if not self.current_settings:
+            raise ValueError("No active session to add watermark to")
+            
+        try:
+            # Add watermark to the session
+            desc = self.current_settings['ps_session'].ActionDescriptor
+            desc.putPath(self.current_settings['ps_session'].app.charIDToTypeID("null"), self.watermark_path)
+            self.current_settings['ps_session'].app.executeAction(self.current_settings['ps_session'].app.charIDToTypeID("Plc "), desc)
+            time.sleep(1.5)
+            
+            # Mark that watermark has been added to the session
+            self.current_settings['has_watermark'] = True
+            
+            # Display guidance about watermark adjustments
+            print("\nWatermark Adjustment Options:")
+            print("- Resize the watermark by dragging the corners")
+            print("- Move to desired position")
+            print("- Adjust opacity in the Layers panel")
+            print("\nIMPORTANT: After making adjustments:")
+            print("- Click the checkmark (✓) in Photoshop")
+            print("- Or press Enter")
+            print("- Or click outside the transform box")
+            print("This commits your changes before proceeding.\n")
+            
+        except Exception as e:
+            raise Exception(f"Failed to add watermark: {str(e)}")
+            
     def confirm_placement(self) -> Dict:
         """
         Confirm the current placement and return settings
@@ -202,92 +231,6 @@ class ContextPlacementHandler:
             initial_bounds = self.current_settings['initial_bounds']
             ps = self.current_settings['ps_session']
             settings = None
-            
-            # Function to try committing placement
-            def try_commit_placement():
-                try:
-                    # Simulate Enter key press to commit placement
-                    ps.app.doJavaScript('app.sendKeyboardShortcut("Enter");')
-                    time.sleep(1)  # Wait for commit to process
-                    return True
-                except Exception as e:
-                    print(f"Failed to commit placement: {str(e)}")
-                    return False
-            
-            # Function to attempt reconnection
-            def try_reconnect(max_attempts=3):
-                for attempt in range(max_attempts):
-                    try:
-                        print(f"\nReconnection attempt {attempt + 1} of {max_attempts}...")
-                        time.sleep(2)  # Wait before reconnecting
-                        
-                        # Create new session
-                        new_ps = Session(self.template_path, action="open")
-                        new_ps.app.displayDialogs = new_ps.DialogModes.DisplayNoDialogs
-                        
-                        # Verify we can access the document
-                        if new_ps.active_document and new_ps.active_document.artLayers.length > 0:
-                            print("Successfully reconnected to Photoshop")
-                            return new_ps, new_ps.active_document.artLayers[0]
-                    except Exception as e:
-                        print(f"Reconnection attempt {attempt + 1} failed: {str(e)}")
-                        if attempt < max_attempts - 1:
-                            print("Waiting before next attempt...")
-                            time.sleep(3)  # Longer wait between attempts
-                
-                return None, None
-            
-            # Verify Photoshop connection is still active
-            try:
-                # Test connection by accessing a simple property
-                _ = ps.active_document.artLayers.length
-            except Exception as e:
-                print(f"Lost connection to Photoshop: {str(e)}")
-                # Check if it's due to uncommitted placement
-                if "Please check if you have Photoshop installed correctly" in str(e):
-                    print("\nDetected uncommitted transformation!")
-                    print("Since you resized or rotated the element, you need to commit the changes:")
-                    print("1. Click the checkmark (✓) in Photoshop")
-                    print("2. Or press Enter")
-                    print("3. Or click outside the transform box")
-                    
-                    if try_commit_placement():
-                        print("Successfully committed transformation")
-                        # Re-get the layer reference
-                        img_layer = ps.active_document.artLayers[0]
-                        self.current_settings['layer'] = img_layer
-                    else:
-                        # Try to reconnect
-                        print("\nAttempting to recover from uncommitted state...")
-                        new_ps, new_layer = try_reconnect()
-                        if new_ps and new_layer:
-                            ps = new_ps
-                            img_layer = new_layer
-                            self.current_settings['ps_session'] = ps
-                            self.current_settings['layer'] = img_layer
-                        else:
-                            print("\nFailed to recover session")
-                            print("Please try the following:")
-                            print("1. Check if Photoshop is responding")
-                            print("2. Make sure to commit any transformations (click ✓ or press Enter)")
-                            print("3. Try the operation again")
-                            raise Exception("Unable to recover Photoshop session")
-                else:
-                    # Try to reconnect for other connection issues
-                    print("\nAttempting to reconnect to Photoshop...")
-                    new_ps, new_layer = try_reconnect()
-                    if new_ps and new_layer:
-                        ps = new_ps
-                        img_layer = new_layer
-                        self.current_settings['ps_session'] = ps
-                        self.current_settings['layer'] = img_layer
-                    else:
-                        print("\nFailed to reconnect to Photoshop")
-                        print("Please try the following:")
-                        print("1. Check if Photoshop is running")
-                        print("2. Make sure no dialog boxes are open")
-                        print("3. Try the operation again")
-                        raise Exception("Unable to reconnect to Photoshop")
             
             try:
                 # Try to get final state
@@ -305,52 +248,33 @@ class ContextPlacementHandler:
                 if final_bounds != initial_bounds:
                     settings['size'] = self._calculate_size_percentage(initial_bounds, final_bounds)
                 
-                # If watermark hasn't been added yet, add it now
+                # If this is individual watermark mode and watermark hasn't been added yet
                 if not self.current_settings.get('has_watermark'):
-                    if not self.watermark_path or not os.path.exists(self.watermark_path):
-                        raise Exception("No valid watermark path provided")
-                    
-                    print("\nAdding watermark...")
-                    print("IMPORTANT: If you resize or rotate the watermark:")
-                    print("- Click the checkmark (✓) in Photoshop")
-                    print("- Or press Enter")
-                    print("- Or click outside the transform box")
-                    print("This commits your changes before proceeding.\n")
-                    
-                    # Add watermark with retry logic
-                    max_retries = 3
-                    for attempt in range(max_retries):
-                        try:
-                            desc = ps.ActionDescriptor
-                            desc.putPath(ps.app.charIDToTypeID("null"), self.watermark_path)
-                            ps.app.executeAction(ps.app.charIDToTypeID("Plc "), desc)
-                            time.sleep(1.5)
-                            
-                            watermark_layer = ps.active_document.artLayers[0]
-                            watermark_layer.opacity = 50
-                            
-                            # Store that we've added the watermark
-                            self.current_settings['has_watermark'] = True
-                            print("Watermark added successfully")
-                            print("Position the watermark as desired")
-                            print("Remember to commit if you resize or rotate!")
-                            break
-                        except Exception as e:
-                            print(f"Attempt {attempt + 1} failed: {str(e)}")
-                            # Check if it's due to uncommitted placement
-                            if "Please check if you have Photoshop installed correctly" in str(e):
-                                print("Detected uncommitted placement, attempting to commit...")
-                                if try_commit_placement():
-                                    print("Successfully committed placement")
-                                    continue
-                            if attempt < max_retries - 1:
-                                print("Retrying watermark placement...")
-                                time.sleep(2)  # Wait before retry
-                            else:
-                                raise Exception("Failed to add watermark after multiple attempts")
-                    
                     # Return without cleaning up so user can position watermark
                     return settings
+                
+                # If watermark was added, capture its settings
+                if self.current_settings.get('has_watermark'):
+                    watermark_layer = ps.active_document.artLayers[0]
+                    settings['watermark'] = {
+                        'position': [watermark_layer.bounds[0], watermark_layer.bounds[1]],
+                        'size': [watermark_layer.bounds[2] - watermark_layer.bounds[0],
+                               watermark_layer.bounds[3] - watermark_layer.bounds[1]],
+                        'opacity': watermark_layer.opacity
+                    }
+                    
+                    # Create output directory and prepare path
+                    output_dir = os.path.join(os.path.dirname(self.current_image_path), "processed_output")
+                    os.makedirs(output_dir, exist_ok=True)
+                    output_path = os.path.join(output_dir, f"{os.path.splitext(os.path.basename(self.current_image_path))[0]}-processed.jpg")
+                    
+                    # Store output path in settings for UI feedback
+                    settings['output_path'] = output_path
+                    
+                    # Clean up
+                    while len(ps.active_document.artLayers) > 1:  # Keep template layer
+                        ps.active_document.artLayers[0].remove()
+                        time.sleep(0.5)  # Small delay between layer removals
                 
             except Exception as e:
                 print(f"Warning during layer property access: {str(e)}")
@@ -361,88 +285,34 @@ class ContextPlacementHandler:
                     'opacity': 100
                 }
             
-            # Store settings before cleanup
-            final_settings = settings
-            
-            # Only do cleanup and save on final confirmation (after watermark)
+            # Only clear current settings if we're done with both image and watermark
             if self.current_settings.get('has_watermark'):
-                try:
-                    print("Starting final save process...")  # Debug print
-                    
-                    if not self.current_image_path:
-                        raise Exception("No current image path available")
-                    
-                    # Create output directory and prepare path
-                    output_dir = os.path.join(os.path.dirname(self.current_image_path), "processed_output")
-                    os.makedirs(output_dir, exist_ok=True)
-                    output_path = os.path.join(output_dir, f"{os.path.splitext(os.path.basename(self.current_image_path))[0]}-processed.jpg")
-                    
-                    print(f"Saving to: {output_path}")  # Debug print
-                    
-                    # Save with retry logic
-                    max_save_retries = 3
-                    for save_attempt in range(max_save_retries):
-                        try:
-                            options = ps.JPEGSaveOptions(quality=12)
-                            ps.active_document.saveAs(output_path, options, asCopy=True)
-                            time.sleep(1.5)  # Wait for save to complete
-                            print("Save completed successfully")  # Debug print
-                            break
-                        except Exception as save_error:
-                            print(f"Save attempt {save_attempt + 1} failed: {str(save_error)}")
-                            if save_attempt < max_save_retries - 1:
-                                print("Retrying save...")
-                                time.sleep(2)  # Wait before retry
-                            else:
-                                raise Exception("Failed to save after multiple attempts")
-                    
-                    # Store output path in settings for UI feedback
-                    final_settings['output_path'] = output_path
-                    
-                    print("Cleaning up layers...")  # Debug print
-                    
-                    # Remove layers with retry logic
-                    cleanup_retries = 3
-                    for cleanup_attempt in range(cleanup_retries):
-                        try:
-                            while len(ps.active_document.artLayers) > 1:  # Keep template layer
-                                ps.active_document.artLayers[0].remove()
-                                time.sleep(0.5)  # Small delay between layer removals
-                            print("Cleanup completed")  # Debug print
-                            break
-                        except Exception as cleanup_error:
-                            print(f"Cleanup attempt {cleanup_attempt + 1} failed: {str(cleanup_error)}")
-                            if cleanup_attempt < cleanup_retries - 1:
-                                print("Retrying cleanup...")
-                                time.sleep(2)  # Wait before retry
-                            else:
-                                print("Warning: Cleanup failed, but save was successful")
-                    
-                except Exception as e:
-                    print(f"Error during save/cleanup: {str(e)}")
-                    print(f"Current image path: {self.current_image_path}")
-                    raise  # Re-raise the exception to handle it in the UI
-                finally:
-                    # Clear current settings only after everything is done
-                    print("Clearing session state...")  # Debug print
-                    self.current_settings = None
-                    self.current_image_path = None
-                    # Add delay before next operation
-                    time.sleep(2)
+                self.current_settings = None
+                self.current_image_path = None
             
-            return final_settings
+            return settings
             
         except Exception as e:
             print(f"Error in confirm_placement: {str(e)}")
-            # Don't clear settings on error unless it was the final confirmation
             if self.current_settings and self.current_settings.get('has_watermark'):
-                print("Clearing session state due to error in final confirmation")  # Debug print
                 self.current_settings = None
                 self.current_image_path = None
-                # Add delay on error too
-                time.sleep(2)
             raise
     
     def has_active_session(self) -> bool:
         """Check if there's an active placement session"""
-        return self.current_settings is not None 
+        if not self.current_settings:
+            return False
+            
+        try:
+            # Try to access the Photoshop session and document
+            ps = self.current_settings['ps_session']
+            doc = ps.active_document
+            # If we can access these without error, session is still active
+            return True
+        except:
+            # If we can't access Photoshop, clean up the session
+            print("Photoshop session is no longer valid, cleaning up...")
+            self.current_settings = None
+            self.current_image_path = None
+            return False 
